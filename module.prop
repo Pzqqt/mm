@@ -1,7 +1,7 @@
 id=mm
 name=Magisk Manager for Recovery Mode (mm)
-version=2018.8.1
-versionCode=201808010
-author=VR25 @ xda-developers
-description=Manage your Magisk image, data, modules & settings from recovery mode -- run "/data/media/mm" on terminal.
+version=2018.8.1-1
+versionCode=20190304
+author=VR25 @ xda-developers & Pzqqt
+description=在 Recovery 模式下管理已安装的 Magisk 模块 -- 请在 Recovery 终端执行 "/data/media/mm" 命令启动. 该版本支持操作 /data/adb/modules 目录来操作模块(适用于 Magisk v18.2), 并已完全汉化.
 minMagisk=1500
