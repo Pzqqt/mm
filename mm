@@ -1,6 +1,7 @@
 #!/sbin/sh
 # (c) 2017-2018, VR25 @ xda-developers
 # License: GPL v3+
+# Simplified Chinese By Pzqqt
 
 
 
@@ -11,9 +12,9 @@ $BOOTMODE || id | grep -q 'uid=0' || BOOTMODE=true
 
 # exit if running in boot mode
 if $BOOTMODE; then
-	echo -e "\nI saw what you did there... :)"
-	echo "- Bad idea!"
-	echo -e "- This is meant to be used in recovery mode only.\n"
+	echo -e "\n我知道你想干嘛... :)"
+	echo "- 这可不是一个好主意!"
+	echo -e "- 该工具仅限在 Recovery 模式下使用.\n"
 	exit 1
 fi
 
@@ -47,7 +48,7 @@ mount_image() {
     done
   fi
   if ! is_mounted $mountPath; then
-    echo -e "\n(!) $IMG mount failed... abort\n"
+    echo -e "\n(!) 挂载 $IMG 失败... 终止\n"
     exit 1
   fi
 }
@@ -57,22 +58,22 @@ mount_image() {
 actions() {
 	echo
 	cat <<EOD
-e) Enable/disable modules
-l) List installed modules
-m) Make magisk.img survive f. resets
-r) Resize magisk.img
-s) Change Magisk settings (using vi text editor)
-t) Toggle auto_mount
-u) Uninstall modules
+e) 启用/禁用模块
+l) 列出已安装的模块
+m) 在清除数据后保持 magisk.img 存活
+r) 调整 magisk.img 大小
+s) 修改 Magisk 设置 (使用 vi 文本编辑器)
+t) 启用/禁用 auto_mount
+u) 卸载模块
 ---
-x. Exit
+x. 退出
 EOD
 	read Input
 	echo
 }
 
 exit_or_not() {
-	echo -e "\n(i) Would you like to do anything else? (Y/n)"
+	echo -e "\n(i) 你还需要进行其他操作吗? (Y/n)"
 	read Ans
 	echo $Ans | grep -iq n && echo && exxit || opts
 }
@@ -81,7 +82,7 @@ ls_mount_path() { ls -1 $mountPath | grep -v 'lost+found'; }
 
 
 toggle() {
-	echo "<Toggle $1>" 
+	echo "<启用/禁用$1>" 
 	: > $tmpf
 	: > $tmpf2
 	Input=0
@@ -100,8 +101,9 @@ toggle() {
 	cat $tmpf
 	echo
 	
-	echo "(i) Input a matching WORD/string at once"
-	echo "- Press ENTER twice when done; CTRL+C to exit"
+	echo "(i) 请输入你需要操作的模块 ID 名称"
+	echo "注：无需输入完整的 ID 名称, 只需输入匹配的开头若干个字符即可"
+	echo "- 按回车键两次以继续; 按 CTRL+C 则退出"
 
 	until [ -z "$Input" ]; do
 		read Input
@@ -117,7 +119,7 @@ toggle() {
 	
 	if grep -Eq '[0-9]|[a-z]|[A-Z]' $tmpf; then
 		. $tmpf
-		echo "Result(s):"
+		echo "操作结果:"
 		
 		grep -q '(ON)' $tmpf2 && cat $tmpf2 \
 			| sed 's/(ON)/(ON) --> (OFF)/' \
@@ -127,31 +129,31 @@ toggle() {
 			| sed "s/$3 //" | sed "s/$4 //" | sed "s/\/$2//"
 	
 	else
-		echo "(i) Operation aborted: null/invalid input"
+		echo "(i) 操作终止: 无效的输入"
 	fi
 }
 
 
-auto_mnt() { auto_mount=true; toggle auto_mount auto_mount rm touch; }
+auto_mnt() { auto_mount=true; toggle " auto_mount" auto_mount rm touch; }
 
-enable_disable_mods() { auto_mount=false; toggle "Module ON/OFF" disable touch rm; }
+enable_disable_mods() { auto_mount=false; toggle "模块" disable touch rm; }
 
 exxit() {
 	cd $tmpDir
 	umount $mountPath
 	losetup -d $loopDevice
 	rmdir $mountPath
-	[ "$1" != "1" ] && exec echo -e "Goodbye.\n" || exit 1
+	[ "$1" != "1" ] && exec echo -e "再见.\n" || exit 1
 }
 
 list_mods() {
-	echo -e "<Installed Modules>\n"
+	echo -e "<已安装的模块>\n"
 	ls_mount_path
 }
 
 
 opts() {
-	echo -e "\n(i) Pick an option..."
+	echo -e "\n(i) 请选择操作..."
 	actions
 
 	case "$Input" in
@@ -171,16 +173,16 @@ opts() {
 
 
 resize_img() {
-	echo -e "<Resize magisk.img>\n"
+	echo -e "<调整 magisk.img 大小>\n"
 	cd $tmpDir
 	df -h $mountPath
 	umount $mountPath
 	losetup -d $loopDevice
-	echo -e "\n(i) Input the desired size in MB"
-	echo "- Or nothing to cancel"
+	echo -e "\n(i) 请输入你需要的大小(单位: MB)并按回车键"
+	echo "- 如果什么也没有输入, 则取消操作"
 	read Input
 	[ -n "$Input" ] && echo -e "\n$(resize2fs $IMG ${Input}M)" \
-    || echo -e "\n(!) Operation aborted: null/invalid input"
+    || echo -e "\n(!) 操作终止: 无效的输入"
 	mount_image $IMG $mountPath
 	cd $mountPath
 }
@@ -191,8 +193,9 @@ rm_mods() {
 	: > $tmpf2
 	Input=0
 	list_mods
-	echo -e "\n(i) Input a matching WORD/string at once"
-	echo "- Press ENTER twice when done, CTRL+C to exit"
+	echo "(i) 请输入你需要删除的模块 ID 名称"
+	echo "注：无需输入完整的 ID 名称, 只需输入匹配的开头若干个字符即可"
+	echo "- 按回车键两次以继续; 按 CTRL+C 则退出"
 
 	until [ -z "$Input" ]; do
 		read Input
@@ -203,10 +206,10 @@ rm_mods() {
 
 	if grep -Eq '[0-9]|[a-z]|[A-Z]' $tmpf; then
 		. $tmpf
-		echo "Removed Module(s):"
+		echo "已移除模块:"
 		cat $tmpf2
 	else
-		echo "(!) Operation aborted: null/invalid input"
+		echo "(!) 操作终止: 无效的输入"
 	fi
 }
 
@@ -214,8 +217,8 @@ rm_mods() {
 immortal_m() {
 	F2FS_workaround=false
 	if ls /cache | grep -i magisk | grep -iq img; then
-		echo "(i) A Magisk image file has been found in /cache"
-		echo "- Are you using the F2FS bug cache workaround? (y/N)"
+		echo "(i) 在 /cache 目录下发现了 Magisk 镜像"
+		echo "- 你是在使用 F2FS bug cache 解决方案吗? (y/N)"
 		read F2FS_workaround
 		echo
 		case $F2FS_workaround in
@@ -223,28 +226,28 @@ immortal_m() {
 			* ) F2FS_workaround=false;;
 		esac
 		
-		$F2FS_workaround && echo "(!) This option is not for you then"
+		$F2FS_workaround && echo "(!) 该选项不适合你"
 	fi
 	
 	if ! $F2FS_workaround; then
 		if [ ! -f /data/media/magisk.img ] && [ -f "$IMG" ] && [ ! -h "$IMG" ]; then
 			Err() { echo "$1"; exit_or_not; }
-			echo "(i) Moving $IMG to /data/media"
+			echo "(i) 正在移动 $IMG 到 /data/media"
 			mv $IMG /data/media \
-				&& echo "-> ln -s /data/media/magisk.img $IMG" \
+				&& echo "-> 创建软链接 /data/media/magisk.img 到 $IMG" \
 				&& ln -s /data/media/magisk.img $IMG \
-				&& echo -e "- All set.\n" \
-				&& echo "(i) Run this again after a factory reset to recreate the symlink." \
-				|| Err "- (!) $IMG couldn't be moved"
+				&& echo -e "- 操作已完成.\n" \
+				&& echo "(i) 请在恢复出厂设置(双清)后再次运行此命令以重新创建符号链接" \
+				|| Err "- (!) 无法移动 $IMG 文件"
 			
 		else
 			if [ ! -e "$IMG" ]; then
-				echo "(i) Fresh ROM, uh?"
-				echo "-> ln -s /data/media/magisk.img $IMG"
+				echo "(i) 新鲜的 ROM, 嗯?"
+				echo "-> 创建软链接 /data/media/magisk.img 到 $IMG"
 				ln -s /data/media/magisk.img $IMG \
-          && echo "- Symlink recreated successfully" \
-          && echo "- You're all set" \
-          || echo -e "\n(!) Symlink creation failed"
+				&& echo "- 已成功创建符号链接" \
+				&& echo "- 操作已完成" \
+				|| echo -e "\n(!) 创建符号链接失败"
 			else
 				echo -e "(!) $IMG exists -- symlink cannot be created"
 			fi
@@ -254,27 +257,27 @@ immortal_m() {
 
 
 m_settings() {
-	echo "(!) Warning: potentially dangerous section"
-	echo "- For advanced users only"
-	echo "- Proceed? (y/N)"
+	echo "(!) 警告: 此操作有潜在的风险"
+	echo "- 仅适用于高级用户"
+	echo "- 要继续吗? (y/N)"
 	read Ans
 
 	if echo "$Ans" | grep -i y; then
 		cat <<EOD
 
-Some Basic vi Usage
+一些基础的 vi 使用方法
 
-i --> enable insertion/typing mode
+i --> 启用插入/输入模式
 
-esc key --> return to comand mode
-ZZ --> save changes & exit
-:q! ENTER --> discard changes & exit
-/STRING --> go to STRING
+esc 键 --> 返回到命令模式
+ZZ --> 保存修改并退出
+:q! 回车 --> 不保存修改并退出
+/字符串 --> 搜索字符串
 
 
-Note that I'm no vi expert by any meAns, but the above should suffice.
+请注意, 我并不精通所有的 vi 命令, 但上述这些应该就足够了.
 
-Hit ENTER to continue...
+请按回车键继续...
 EOD
 		read
 		vi /data/data/com.topjohnwu.magisk/shared_prefs/com.topjohnwu.magisk_preferences.xml
@@ -294,7 +297,7 @@ mount /cache 2>/dev/null
 [ -d /data/adb/magisk ] && IMG=/data/adb/magisk.img || IMG=/data/magisk.img
 
 if [ ! -d /data/adb/magisk ] && [ ! -d /data/magisk ]; then
-	echo -e "\n(!) No Magisk installation found or installed version is not supported\n"
+	echo -e "\n(!) 看起来你还没有安装 Magisk, 或是你安装的版本不受支持.\n"
 	exit 1
 fi
 
