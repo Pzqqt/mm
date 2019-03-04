@@ -70,7 +70,16 @@ mount_image() {
   fi
 }
 
-
+symlink_modules() {
+	mount -o remount,rw /
+	[ -d "$2" ] && is_mounted $2 && {
+		loopedA=`mount | grep $2 | head -n1 | cut -d " " -f1`
+		umount $2
+		losetup -d $loopedA
+	}
+	rm -rf $2
+	ln -s $1 $2
+}
 
 actions() {
 	echo
@@ -157,9 +166,13 @@ enable_disable_mods() { auto_mount=false; toggle "模块" disable touch rm; }
 
 exxit() {
 	cd $tmpDir
-	umount $mountPath
-	losetup -d $loopDevice
-	rmdir $mountPath
+	if $migrated; then
+		rm -f $mountPath
+	else
+		umount $mountPath
+		losetup -d $loopDevice
+		rmdir $mountPath
+	fi
 	[ "$1" != "1" ] && exec echo -e "再见.\n" || exit 1
 }
 
@@ -196,6 +209,7 @@ opts() {
 
 
 resize_img() {
+	$migrated && echo "(!) 该选项不适合你" && return
 	echo -e "<调整 magisk.img 大小>\n"
 	cd $tmpDir
 	df -h $mountPath
@@ -205,7 +219,7 @@ resize_img() {
 	echo "- 如果什么也没有输入, 则取消操作"
 	read Input
 	[ -n "$Input" ] && echo -e "\n$(resize2fs $IMG ${Input}M)" \
-    || echo -e "\n(!) 操作终止: 无效的输入"
+	|| echo -e "\n(!) 操作终止: 无效的输入"
 	mount_image $IMG $mountPath
 	cd $mountPath
 }
@@ -238,6 +252,7 @@ rm_mods() {
 
 
 immortal_m() {
+	$migrated && echo "(!) 该选项不适合你" && return
 	F2FS_workaround=false
 	if ls /cache | grep -i magisk | grep -iq img; then
 		echo "(i) 在 /cache 目录下发现了 Magisk 镜像"
@@ -316,16 +331,21 @@ mountPath=/magisk
 
 mount /data 2>/dev/null
 mount /cache 2>/dev/null
-
-[ -d /data/adb/magisk ] && IMG=/data/adb/magisk.img || IMG=/data/magisk.img
-
-if [ ! -d /data/adb/magisk ] && [ ! -d /data/magisk ]; then
-	echo -e "\n(!) 看起来你还没有安装 Magisk, 或是你安装的版本不受支持.\n"
-	exit 1
+if [ -d /data/adb/modules ]; then
+	migrated=true
+	IMG=""
+	symlink_modules /data/adb/modules $mountPath
+else
+	[ -d /data/adb/magisk ] && IMG=/data/adb/magisk.img || IMG=/data/magisk.img
+	if [ ! -d /data/adb/magisk ] && [ ! -d /data/magisk ]; then
+		echo -e "\n(!) 看起来你还没有安装 Magisk, 或是你安装的版本不受支持.\n"
+		exit 1
+	fi
+	migrated=false
+	mkdir -p $tmpDir 2>/dev/null
+	mount_image $IMG $mountPath
 fi
 
-mkdir -p $tmpDir 2>/dev/null
-mount_image $IMG $mountPath
 cd $mountPath
 
 echo -e "\nMagisk Manager for Recovery Mode (mm)
