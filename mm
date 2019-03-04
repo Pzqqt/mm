@@ -25,6 +25,23 @@ umask 022
 
 is_mounted() { mountpoint -q "$1"; }
 
+file_getprop() { grep "^$2=" "$1" | head -n1 | cut -d= -f2; }
+
+get_module_info() {
+	module=$1
+	propkey=$2
+	if [ -f /magisk/${module}/module.prop ]; then
+		infotext=`file_getprop /magisk/${module}/module.prop $propkey`
+		if [ ${#infotext} -ne 0 ]; then
+			echo $infotext
+		else
+			echo "(未提供信息)"
+		fi
+	else
+		echo "(未提供信息)"
+	fi
+}
+
 mount_image() {
   e2fsck -fy $IMG &>/dev/null
   if [ ! -d "$2" ]; then
@@ -148,7 +165,13 @@ exxit() {
 
 list_mods() {
 	echo -e "<已安装的模块>\n"
-	ls_mount_path
+	installed_modules=`ls_mount_path`
+	if [ ${#installed_modules} -ne 0 ]; then
+		for module in ${installed_modules}; do
+			module_name=$(get_module_info $module name)
+			echo -e " - ${module}\n   模块名: $module_name"
+		done
+	fi
 }
 
 
