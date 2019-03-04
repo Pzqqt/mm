@@ -342,10 +342,10 @@ else
 		exit 1
 	fi
 	migrated=false
-	mkdir -p $tmpDir 2>/dev/null
 	mount_image $IMG $mountPath
 fi
 
+mkdir -p $tmpDir 2>/dev/null
 cd $mountPath
 
 echo -e "\nMagisk Manager for Recovery Mode (mm)
