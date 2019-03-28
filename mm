@@ -210,7 +210,7 @@ opts() {
 
 
 resize_img() {
-	$imageless_magisk && echo "(!) 该选项不适合你" && return
+	$imageless_magisk && echo "(!) 该选项仅适用于 Magisk v18.1 及以下版本" && return
 	echo -e "<调整 magisk.img 大小>\n"
 	cd $tmpDir
 	df -h $mountPath
@@ -257,7 +257,7 @@ rm_mods() {
 
 
 immortal_m() {
-	$imageless_magisk && echo "(!) 该选项不适合你" && return
+	$imageless_magisk && echo "(!) 该选项仅适用于 Magisk v18.1 及以下版本" && return
 	F2FS_workaround=false
 	if ls /cache | grep -i magisk | grep -iq img; then
 		echo "(i) 在 /cache 目录下发现了 Magisk 镜像"
