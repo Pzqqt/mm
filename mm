@@ -30,8 +30,8 @@ file_getprop() { grep "^$2=" "$1" | head -n1 | cut -d= -f2; }
 get_module_info() {
 	module=$1
 	propkey=$2
-	if [ -f /magisk/${module}/module.prop ]; then
-		infotext=`file_getprop /magisk/${module}/module.prop $propkey`
+	if [ -f ${mountPath}/${module}/module.prop ]; then
+		infotext=`file_getprop ${mountPath}/${module}/module.prop $propkey`
 		if [ ${#infotext} -ne 0 ]; then
 			echo $infotext
 		else
@@ -68,17 +68,6 @@ mount_image() {
     echo -e "\n(!) 挂载 $IMG 失败... 终止\n"
     exit 1
   fi
-}
-
-symlink_modules() {
-	mount -o remount,rw /
-	[ -d "$2" ] && is_mounted $2 && {
-		loopedA=`mount | grep $2 | head -n1 | cut -d " " -f1`
-		umount $2
-		losetup -d $loopedA
-	}
-	rm -rf $2
-	ln -s $1 $2
 }
 
 actions() {
@@ -180,9 +169,7 @@ enable_disable_mods() { auto_mount=false; toggle "启用/禁用模块" disable t
 
 exxit() {
 	cd $tmpDir
-	if $imageless_magisk; then
-		rm -f $mountPath
-	else
+	if ! $imageless_magisk; then
 		umount $mountPath
 		losetup -d $loopDevice
 		rmdir $mountPath
@@ -354,7 +341,7 @@ imagelessPath=/data/adb/modules
 MAGISK_VER_CODE=$(file_getprop /data/adb/magisk/util_functions.sh "MAGISK_VER_CODE")
 if [ "$MAGISK_VER_CODE" -gt 18100 ] && [ -d "$imagelessPath" ]; then
 	IMG=""
-	symlink_modules /data/adb/modules $mountPath
+	mountPath=$imagelessPath
 	imageless_magisk=true
 else
 	[ -d /data/adb/magisk ] && IMG=/data/adb/magisk.img || IMG=/data/magisk.img
