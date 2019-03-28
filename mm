@@ -89,7 +89,7 @@ l) 列出已安装的模块
 m) 在清除数据后保持 magisk.img 存活
 r) 调整 magisk.img 大小
 s) 修改 Magisk 设置 (使用 vi 文本编辑器)
-t) 启用/禁用 auto_mount
+t) 启用/禁用模块挂载
 u) 卸载模块
 ---
 x. 退出
@@ -108,18 +108,26 @@ ls_mount_path() { ls -1 $mountPath | grep -v 'lost+found'; }
 
 
 toggle() {
-	echo "<启用/禁用$1>" 
+	echo "<$1>" 
 	: > $tmpf
 	: > $tmpf2
 	Input=0
 	
+	if [ "$2" = "remove" ]; then
+		on_flag="正常"
+		off_flag="重启后移除"
+	else
+		on_flag="ON"
+		off_flag="OFF"
+	fi
+	
 	for mod in $(ls_mount_path); do
 		if $auto_mount; then
-			[ -f "$mod/$2" ] && echo "$mod (ON)" >> $tmpf \
-				|| echo "$mod (OFF)" >> $tmpf
+			[ -f "$mod/$2" ] && echo "$mod (${on_flag})" >> $tmpf \
+				|| echo "$mod (${off_flag})" >> $tmpf
 		else
-			[ -f "$mod/$2" ] && echo "$mod (OFF)" >> $tmpf \
-				|| echo "$mod (ON)" >> $tmpf
+			[ -f "$mod/$2" ] && echo "$mod (${off_flag})" >> $tmpf \
+				|| echo "$mod (${on_flag})" >> $tmpf
 		fi
 	done
 	
@@ -128,30 +136,30 @@ toggle() {
 	echo
 	
 	echo "(i) 请输入你需要操作的模块 ID 名称"
-	echo "注：无需输入完整的 ID 名称, 只需输入匹配的开头若干个字符即可"
+	echo "注：无需输入完整的 ID 名称, 只需输入匹配的若干个字符即可"
 	echo "- 按回车键两次以继续; 按 CTRL+C 则退出"
 
 	until [ -z "$Input" ]; do
 		read Input
 		if [ -n "$Input" ]; then
-			grep "$Input" $tmpf | grep -q '(ON)' && \
-				echo "$3 $(grep "$Input" $tmpf | grep '(ON)')/$2" >> $tmpf2
-			grep "$Input" $tmpf | grep -q '(OFF)' && \
-				echo "$4 $(grep "$Input" $tmpf | grep '(OFF)')/$2" >> $tmpf2
+			grep "$Input" $tmpf | grep -q "(${on_flag})" && \
+				echo "$3 $(grep "$Input" $tmpf | grep "(${on_flag})")/$2" >> $tmpf2
+			grep "$Input" $tmpf | grep -q "(${off_flag})" && \
+				echo "$4 $(grep "$Input" $tmpf | grep "(${off_flag})")/$2" >> $tmpf2
 		fi
 	done
 	
-	cat $tmpf2 | sed 's/ (ON)//' | sed 's/ (OFF)//' > $tmpf
+	cat $tmpf2 | sed "s/ (${on_flag})//" | sed "s/ (${off_flag})//" > $tmpf
 	
 	if grep -Eq '[0-9]|[a-z]|[A-Z]' $tmpf; then
 		. $tmpf
 		echo "操作结果:"
 		
-		grep -q '(ON)' $tmpf2 && cat $tmpf2 \
-			| sed 's/(ON)/(ON) --> (OFF)/' \
+		grep -q "(${on_flag})" $tmpf2 && cat $tmpf2 \
+			| sed "s/(${on_flag})/(${on_flag}) --> (${off_flag})/" \
 			| sed "s/$3 //" | sed "s/$4 //" | sed "s/\/$2//"
-		grep -q '(OFF)' $tmpf2 && cat $tmpf2 \
-			| sed 's/(OFF)/(OFF) --> (ON)/' \
+		grep -q "(${off_flag})" $tmpf2 && cat $tmpf2 \
+			| sed "s/(${off_flag})/(${off_flag}) --> (${on_flag})/" \
 			| sed "s/$3 //" | sed "s/$4 //" | sed "s/\/$2//"
 	
 	else
@@ -160,13 +168,19 @@ toggle() {
 }
 
 
-auto_mnt() { auto_mount=true; toggle " auto_mount" auto_mount rm touch; }
+auto_mnt() {
+	if $imageless_magisk; then
+		auto_mount=false; toggle "启用/禁用挂载" skip_mount touch rm;
+	else
+		auto_mount=true; toggle "启用/禁用挂载" auto_mount rm touch;
+	fi
+}
 
-enable_disable_mods() { auto_mount=false; toggle "模块" disable touch rm; }
+enable_disable_mods() { auto_mount=false; toggle "启用/禁用模块" disable touch rm; }
 
 exxit() {
 	cd $tmpDir
-	if $migrated; then
+	if $imageless_magisk; then
 		rm -f $mountPath
 	else
 		umount $mountPath
@@ -209,7 +223,7 @@ opts() {
 
 
 resize_img() {
-	$migrated && echo "(!) 该选项不适合你" && return
+	$imageless_magisk && echo "(!) 该选项不适合你" && return
 	echo -e "<调整 magisk.img 大小>\n"
 	cd $tmpDir
 	df -h $mountPath
@@ -226,33 +240,37 @@ resize_img() {
 
 
 rm_mods() { 
-	: > $tmpf
-	: > $tmpf2
-	Input=0
-	list_mods
-	echo "(i) 请输入你需要删除的模块 ID 名称"
-	echo "注：无需输入完整的 ID 名称, 只需输入匹配的开头若干个字符即可"
-	echo "- 按回车键两次以继续; 按 CTRL+C 则退出"
-
-	until [ -z "$Input" ]; do
-		read Input
-		[ -n "$Input" ] && ls_mount_path | grep "$Input" \
-			| sed 's/^/rm -rf /' >> $tmpf \
-			&& ls_mount_path | grep "$Input" >> $tmpf2
-	done
-
-	if grep -Eq '[0-9]|[a-z]|[A-Z]' $tmpf; then
-		. $tmpf
-		echo "已移除模块:"
-		cat $tmpf2
+	if $imageless_magisk; then
+		auto_mount=false; toggle "移除/撤销移除模块" remove touch rm;
 	else
-		echo "(!) 操作终止: 无效的输入"
+		: > $tmpf
+		: > $tmpf2
+		Input=0
+		list_mods
+		echo "(i) 请输入你需要移除的模块 ID 名称"
+		echo "注：无需输入完整的 ID 名称, 只需输入匹配的若干个字符即可"
+		echo "- 按回车键两次以继续; 按 CTRL+C 则退出"
+
+		until [ -z "$Input" ]; do
+			read Input
+			[ -n "$Input" ] && ls_mount_path | grep "$Input" \
+				| sed 's/^/rm -rf /' >> $tmpf \
+				&& ls_mount_path | grep "$Input" >> $tmpf2
+		done
+
+		if grep -Eq '[0-9]|[a-z]|[A-Z]' $tmpf; then
+			. $tmpf
+			echo "已移除模块:"
+			cat $tmpf2
+		else
+			echo "(!) 操作终止: 无效的输入"
+		fi
 	fi
 }
 
 
 immortal_m() {
-	$migrated && echo "(!) 该选项不适合你" && return
+	$imageless_magisk && echo "(!) 该选项不适合你" && return
 	F2FS_workaround=false
 	if ls /cache | grep -i magisk | grep -iq img; then
 		echo "(i) 在 /cache 目录下发现了 Magisk 镜像"
@@ -287,7 +305,7 @@ immortal_m() {
 				&& echo "- 操作已完成" \
 				|| echo -e "\n(!) 创建符号链接失败"
 			else
-				echo -e "(!) $IMG exists -- symlink cannot be created"
+				echo -e "(!) $IMG 已存在 -- 无法创建符号链接"
 			fi
 		fi
 	fi
@@ -331,17 +349,20 @@ mountPath=/magisk
 
 mount /data 2>/dev/null
 mount /cache 2>/dev/null
-if [ -d /data/adb/modules ]; then
-	migrated=true
+
+imagelessPath=/data/adb/modules
+MAGISK_VER_CODE=$(file_getprop /data/adb/magisk/util_functions.sh "MAGISK_VER_CODE")
+if [ "$MAGISK_VER_CODE" -gt 18100 ] && [ -d "$imagelessPath" ]; then
 	IMG=""
 	symlink_modules /data/adb/modules $mountPath
+	imageless_magisk=true
 else
 	[ -d /data/adb/magisk ] && IMG=/data/adb/magisk.img || IMG=/data/magisk.img
 	if [ ! -d /data/adb/magisk ] && [ ! -d /data/magisk ]; then
 		echo -e "\n(!) 看起来你还没有安装 Magisk, 或是你安装的版本不受支持.\n"
 		exit 1
 	fi
-	migrated=false
+	imageless_magisk=false
 	mount_image $IMG $mountPath
 fi
 
