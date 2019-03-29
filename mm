@@ -1,7 +1,7 @@
 #!/sbin/sh
 # (c) 2017-2018, VR25 @ xda-developers
 # License: GPL v3+
-# Simplified Chinese By Pzqqt
+# Simplified Chinese & Modify By Pzqqt
 
 
 
@@ -357,7 +357,7 @@ mkdir -p $tmpDir 2>/dev/null
 cd $mountPath
 
 echo -e "\nMagisk Manager for Recovery Mode (mm)
-(c) 2017-2018, VR25 @ xda-developers
+(c) 2017-2018, VR25 @ xda-developers & Pzqqt
 License: GPL v3+"
 
 opts
