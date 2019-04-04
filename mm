@@ -70,7 +70,7 @@ q) 退出
     case $opt in
       m) toggle_mnt;;
       d) toggle_disable;;
-      l) echo -e "已安装的模块\n"; ls_mods;;
+      l) echo -e "已安装的模块\n"; ls_mods_with_name;;
       r) toggle_remove;;
       q) exit 0;;
       c) toggle_com;;
@@ -89,6 +89,26 @@ q) 退出
 is_mounted() { grep -q "$1" /proc/mounts; }
 
 ls_mods() { ls -1 $mountPath | grep -v 'lost+found' || echo "<尚未安装任何模块>"; }
+
+get_mod_name() {
+  if [ -f $mountPath/${1}/module.prop ]; then
+    name=`grep "^name=" $mountPath/${1}/module.prop | head -n1 | cut -d= -f2`
+    [ ${#name} -ne 0 ] && echo $name && return
+  fi
+  echo "(获取模块名称失败)"
+}
+
+ls_mods_with_name() {
+  installed_modules=`ls -1 $mountPath | grep -v 'lost+found'`
+  if [ ${#installed_modules} -ne 0 ]; then
+    for module in $installed_modules; do
+      echo -en " - ${module}\n   模块名: "
+      get_mod_name $module
+    done
+  else
+    echo "<尚未安装任何模块>"
+  fi
+}
 
 
 exxit() {
