@@ -2,6 +2,7 @@
 # Magisk Manager for Recovery Mode (mm)
 # Copyright (C) 2017-2019, VR25 @ xda-developers
 # License: GPLv3+
+# Simplified Chinese By Pzqqt
 
 
 main() {
@@ -20,7 +21,7 @@ License: GPLv3+\n"
 trap 'exxit $?' EXIT
 
 if is_mounted /storage/emulated; then
-  echo -e "(!) This is meant to be used in recovery environment only!\n"
+  echo -e "(!) 该程序仅限在 Recovery 模式下使用!\n"
   exit 1
 fi
 
@@ -31,7 +32,7 @@ mount /data 2>/dev/null || :
 mount /cache 2>/dev/null || :
 
 if [ ! -d /data/adb/magisk ]; then
-  echo -e "(!) No Magisk installation found or installed version is not supported.\n"
+  echo -e "(!) 看起来你还没有安装 Magisk, 或是你安装的版本不受支持.\n"
   exit 1
 fi
 
@@ -52,15 +53,14 @@ options() {
 
   while :; do
     echo -n "##########################
-l) List installed modules
+l) 列出已安装的模块
 ##########################
-Toggle
-  c) Core only mode
-  m) Magic mount
-  d) Disable
-  r) Remove
+  c) 启用/禁用核心功能模式
+  m) 启用/禁用 Magic 挂载
+  d) 启用/禁用模块
+  r) 切换模块移除标记
 ##########################
-q) Quit
+q) 退出
 ##########################
 
 ?) "
@@ -70,7 +70,7 @@ q) Quit
     case $opt in
       m) toggle_mnt;;
       d) toggle_disable;;
-      l) echo -e "Installed Modules\n"; ls_mods;;
+      l) echo -e "已安装的模块\n"; ls_mods;;
       r) toggle_remove;;
       q) exit 0;;
       c) toggle_com;;
@@ -78,7 +78,7 @@ q) Quit
     break
   done
 
-  echo -en "\n(i) Press <enter> to continue or \"q <enter>\" to quit... "
+  echo -en "\n(i) 输入回车键以继续, 或输入\"q\"再输入回车键以退出... "
   read opt
   [ -z "$opt" ] || exit 0
   echo
@@ -88,7 +88,7 @@ q) Quit
 
 is_mounted() { grep -q "$1" /proc/mounts; }
 
-ls_mods() { ls -1 $mountPath | grep -v 'lost+found' || echo "<None>"; }
+ls_mods() { ls -1 $mountPath | grep -v 'lost+found' || echo "<尚未安装任何模块>"; }
 
 
 exxit() {
@@ -98,19 +98,23 @@ exxit() {
   rmdir $mountPath
   mount -o remount,ro /
   rm -rf $tmpDir
-  [ ${1:-0} -eq 0 ] && { echo -e "\nGoodbye.\n"; exit 0; } || exit $1
+  [ ${1:-0} -eq 0 ] && { echo -e "\n再见.\n"; exit 0; } || exit $1
 } 2>/dev/null
 
 
 toggle() {
   local input="" mod=""
   local file="$1" present="$2" absent="$3"
-  for mod in $(ls_mods | grep -v \<None\> || :); do
+  for mod in $(ls_mods | grep -v \<尚未安装任何模块\> || :); do
     echo -n "$mod ["
     [ -f $mountPath/$mod/$file ] && echo "$present]" || echo "$absent]"
   done
 
-  echo -en "\nInput pattern(s) (e.g., a dot for all, acc, or fbind|xpo|viper): "
+  echo -e "\n(i) 请输入你需要操作的模块 ID"
+  echo "注：无需输入完整的 ID, 只需输入匹配的若干个字符即可"
+  echo "示例: 假设要操作的模块 ID 为 xposed, 则输入xpo即可"
+  echo "注意: 点号\".\"表示所有模块"
+  echo -n "请输入: "
   read input
   echo
 
@@ -124,20 +128,20 @@ toggle() {
 
 
 toggle_mnt() {
-  echo -e "Toggle Magic Mount\n"
+  echo -e "启用/禁用 Magic 挂载\n"
   [ -f $img ] && { toggle auto_mount ON OFF || :; } \
     || toggle skip_mount OFF ON
 }
 
 
 toggle_disable() {
-  echo -e "Toggle ON/OFF\n"
+  echo -e "启用/禁用模块\n"
   toggle disable OFF ON
 }
 
 
 toggle_remove() {
-  echo -e "Mark for Removal ([X])\n"
+  echo -e "切换模块移除标记 ([X])\n"
   toggle remove X " "
 }
 
@@ -145,10 +149,10 @@ toggle_remove() {
 toggle_com() {
   if [ -f /cache/.disable_magisk ] || [ -f /data/cache/.disable_magisk ]; then
     rm /data/cache/.disable_magisk /cache/.disable_magisk 2>/dev/null || :
-    echo "(i) Core only mode [OFF]"
+    echo "(i) 核心功能模式已禁用"
   else
     touch /data/cache/.disable_magisk /cache/.disable_magisk 2>/dev/null || :
-    echo "(i) Core only mode [ON]"
+    echo "(i) 核心功能模式已启用"
   fi
 }
 
